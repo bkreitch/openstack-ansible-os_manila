@@ -1,0 +1,237 @@
+---
+# Copyright 2014, Rackspace US, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## APT Cache options
+cache_timeout: 600
+
+manila_git_repo: https://git.openstack.org/openstack/manila
+manila_git_install_branch: master
+manila_requirements_git_repo: https://git.openstack.org/openstack/requirements
+manila_requirements_git_install_branch: master
+manila_developer_mode: false
+manila_developer_constraints:
+  - "git+{{ manila_git_repo }}@{{ manila_git_install_branch }}#egg=manila"
+
+# Name of the virtual env to deploy into
+manila_venv_tag: untagged
+manila_venv_bin: "/openstack/venvs/manila-{{ manila_venv_tag }}/bin"
+
+# Set this to enable or disable installing in a venv
+manila_venv_enabled: true
+
+# The bin path defaults to the venv path however if installation in a
+#  venv is disabled the bin path will be dynamically set based on the
+#  system path used when the installing.
+manila_bin: "{{ manila_venv_bin }}"
+
+manila_venv_download_url: http://127.0.0.1/venvs/untagged/ubuntu/manila.tgz
+
+# Enable/Disable Ceilometer
+manila_ceilometer_enabled: False
+
+manila_storage_availability_zone: nova
+manila_default_availability_zone: "{{ manila_storage_availability_zone }}"
+
+manila_storage_address: 127.0.0.1
+manila_management_address: 127.0.0.1
+
+manila_nova_catalog_info: compute:nova:internalURL
+manila_nova_catalog_admin_info: compute:nova:adminURL
+
+manila_fatal_deprecations: False
+
+## DB
+manila_galera_user: manila
+manila_galera_database: manila
+
+## RabbitMQ info
+manila_rabbitmq_userid: manila
+manila_rabbitmq_vhost: /manila
+
+## manila User / Group
+manila_system_user_name: manila
+manila_system_group_name: manila
+manila_system_comment: manila system user
+manila_system_shell: /bin/false
+manila_system_home_folder: "/var/lib/{{ manila_system_user_name }}"
+
+## manila Auth
+manila_service_admin_tenant_name: "service"
+manila_service_admin_username: "manila"
+
+## manila API's enabled
+manila_enable_v1_api: true
+manila_enable_v2_api: true
+
+## manila api service type and data
+manila_service_name: manila
+manila_service_project_domain_id: default
+manila_service_user_domain_id: default
+manila_service_user_name: manila
+manila_service_project_name: service
+manila_service_role_name: admin
+manila_service_region: RegionOne
+manila_service_description: "Manila Share Service"
+manila_service_port: 8786
+manila_service_proto: http
+manila_service_publicuri_proto: "{{ openstack_service_publicuri_proto | default(manila_service_proto) }}"
+manila_service_adminuri_proto: "{{ openstack_service_adminuri_proto | default(manila_service_proto) }}"
+manila_service_internaluri_proto: "{{ openstack_service_internaluri_proto | default(manila_service_proto) }}"
+manila_service_type: share
+manila_service_publicuri: "{{ manila_service_publicuri_proto }}://{{ external_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_publicurl: "{{ manila_service_publicuri }}/v1/%(tenant_id)s"
+manila_service_adminuri: "{{ manila_service_adminuri_proto }}://{{ internal_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_adminurl: "{{ manila_service_adminuri }}/v1/%(tenant_id)s"
+manila_service_internaluri: "{{ manila_service_internaluri_proto }}://{{ internal_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_internalurl: "{{ manila_service_internaluri }}/v1/%(tenant_id)s"
+manila_service_program_name: manila-api
+
+manila_service_v2_name: manilav2
+manila_service_v2_port: 8786
+manila_service_v2_proto: http
+manila_service_v2_type: sharev2
+manila_service_v2_description: "Manila Share Service V2"
+manila_service_v2_publicuri: "{{ manila_service_publicuri_proto }}://{{ external_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_v2_publicurl: "{{ manila_service_publicuri }}/v2/%(tenant_id)s"
+manila_service_v2_adminuri: "{{ manila_service_adminuri_proto }}://{{ internal_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_v2_adminurl: "{{ manila_service_adminuri }}/v2/%(tenant_id)s"
+manila_service_v2_internaluri: "{{ manila_service_internaluri_proto }}://{{ internal_lb_vip_address }}:{{ manila_service_port }}"
+manila_service_v2_internalurl: "{{ manila_service_internaluri }}/v2/%(tenant_id)s"
+
+## Keystone authentication middleware
+manila_keystone_auth_plugin: password
+
+manila_service_share_program_name: manila-share
+
+manila_service_scheduler_program_name: manila-scheduler
+
+manila_service_data_program_name: manila-data
+
+# If ``manila_osapi_volume_workers`` is unset the system will use half the number of
+# available VCPUS to compute the number of api workers to use.
+# manila_osapi_volume_workers: 16
+
+## manila iscsi
+manila_iscsi_helper: tgtadm
+manila_iscsi_iotype: fileio
+manila_iscsi_num_targets: 100
+manila_iscsi_port: 3260
+
+## manila RPC
+manila_rpc_backend: rabbit
+
+# (StrOpt) Method used to wipe old volumes (valid options are: none, zero,
+# shred)
+manila_volume_clear: shred
+# (StrOpt) The flag to pass to ionice to alter the i/o priority of the process
+# used to zero a volume after deletion, for example "-c3" for idle only
+# priority.
+manila_volume_clear_ionice: -c3
+
+# (IntOpt) Size in MiB to wipe at start of old volumes. 0 => all
+manila_volume_clear_size: 0
+
+manila_volume_name_template: volume-%s
+
+# osprofiler
+manila_profiler_enabled: false
+# manila_profiler_hmac_key is set in user_secrets.yml
+manila_profiler_trace_sqlalchemy: false
+
+manila_client_socket_timeout: 900
+
+## manila quota
+manila_quota_volumes: 10
+manila_quota_snapshots: 10
+manila_quota_consistencygroups: 10
+manila_quota_gigabytes: 1000
+manila_quota_backups: 10
+manila_quota_backup_gigabytes: 1000
+
+## General configuration
+# manila_backends:
+#   lvm:
+#     volume_group: manila-volumes
+#     volume_driver: manila.volume.drivers.lvm.LVMVolumeDriver
+#     volume_backend_name: LVM_iSCSI
+
+# manila_backend_lvm_inuse: True if current host has an lvm backend
+manila_backend_lvm_inuse: '{{ (manila_backends|default("")|to_json).find("lvm") != -1 }}'
+
+## Define nfs information for manila. When the manila_nfs_client dictionary is defined,
+## it will enable nfs shares.  The value ``nfs_shares_config`` is the path on the disk
+## where the NFS export will live. The ``shares`` value is a list of dictionaries that
+## must have the IP address of the NFS server and the location where the export will be.
+# manila_nfs_client:
+#   nfs_shares_config: /etc/manila/nfs_shares
+#   shares:
+#     - ip: "127.0.0.1"
+#       share: "/vol/manila"
+
+## Policy vars
+# Provide a list of access controls to update the default policy.json with. These changes will be merged
+# with the access controls in the default policy.json. E.g.
+#manila_policy_overrides:
+#  "volume:create": ""
+#  "volume:delete": ""
+
+# Comma separated list of Glance API servers
+# manila_glance_api_servers:
+
+manila_glance_api_version: 1
+
+manila_service_in_ldap: false
+
+# manila packages that must be installed before anything else
+manila_requires_pip_packages:
+  - virtualenv
+  - virtualenv-tools
+  - python-keystoneclient # Keystoneclient needed by the keystone Ansible module
+  - httplib2 # needed?
+
+# Common pip packages
+manila_pip_packages:
+  - manila
+  - httplib2
+  - PyMySQL
+  - python-memcached
+  - pycrypto # needed?
+  - python-manilaclient
+  - python-keystoneclient
+  - python-neutronclient
+  - requests
+  - Babel
+  - oslo.policy
+  - oslo.utils
+  - oslo.messaging
+  - oslo.service
+  - oslo.concurrency
+  - oslo.context
+  - oslo.config
+  - paramiko
+  - keystoneauth1
+
+# Service Names
+manila_service_names:
+  - manila-api
+  - manila-scheduler
+  - manila-share
+  - manila-data
+
+## Tunable overrides
+manila_policy_overrides: {}
+manila_rootwrap_conf_overrides: {}
+manila_api_paste_ini_overrides: {}
+manila_manila_conf_overrides: {}

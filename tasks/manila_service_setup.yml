@@ -1,0 +1,44 @@
+---
+# Copyright 2014, Rackspace US, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- include: manila_service_add.yml
+  vars:
+    service_user_name: "{{ manila_service_user_name }}"
+    service_tenant_name: "{{ manila_service_project_name }}"
+    service_name: "{{ manila_service_name }}"
+    service_type: "{{ manila_service_type }}"
+    service_region: "{{ manila_service_region }}"
+    service_description: "{{ manila_service_description }}"
+    service_password: "{{ manila_service_password }}"
+    service_publicurl: "{{ manila_service_publicurl }}"
+    service_internalurl: "{{ manila_service_internalurl }}"
+    service_adminurl: "{{ manila_service_adminurl }}"
+  tags:
+    - manila-server
+
+- include: manila_service_add.yml
+  vars:
+    service_user_name: "{{ manila_service_user_name }}"
+    service_tenant_name: "{{ manila_service_project_name }}"
+    service_name: "{{ manila_service_v2_name }}"
+    service_type: "{{ manila_service_v2_type }}"
+    service_region: "{{ manila_service_region }}"
+    service_description: "{{ manila_service_v2_description }}"
+    service_password: "{{ manila_service_password }}"
+    service_publicurl: "{{ manila_service_v2_publicurl }}"
+    service_internalurl: "{{ manila_service_v2_internalurl }}"
+    service_adminurl: "{{ manila_service_v2_adminurl }}"
+  tags:
+    - manila-server

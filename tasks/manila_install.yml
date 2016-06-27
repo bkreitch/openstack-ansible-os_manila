@@ -1,0 +1,217 @@
+---
+# Copyright 2014, Rackspace US, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+- include: manila_install_apt.yml
+  when:
+    - ansible_pkg_mgr == 'apt'
+  tags:
+    - install-apt
+
+- name: Create developer mode constraint file
+  copy:
+    dest: "/opt/developer-pip-constraints.txt"
+    content: |
+      {% for item in manila_developer_constraints %}
+      {{ item }}
+      {% endfor %}
+  when:
+    - manila_developer_mode | bool
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Clone requirements git repository
+  git:
+    repo: "{{ manila_requirements_git_repo }}"
+    dest: "/opt/requirements"
+    clone: yes
+    update: yes
+    version: "{{ manila_requirements_git_install_branch }}"
+  when:
+    - manila_developer_mode | bool
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Add constraints to pip_install_options fact for developer mode
+  set_fact:
+    pip_install_options_fact: "{{ pip_install_options|default('') }} --constraint /opt/developer-pip-constraints.txt --constraint /opt/requirements/upper-constraints.txt"
+  when:
+    - manila_developer_mode | bool
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Set pip_install_options_fact when not in developer mode
+  set_fact:
+    pip_install_options_fact: "{{ pip_install_options|default('') }}"
+  when:
+    - not manila_developer_mode | bool
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Install requires pip packages
+  pip:
+    name: "{{ item }}"
+    state: present
+    extra_args: "{{ pip_install_options_fact }}"
+  register: install_packages
+  until: install_packages|success
+  retries: 5
+  delay: 2
+  with_items: manila_requires_pip_packages
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Get local venv checksum
+  stat:
+    path: "/var/cache/{{ manila_venv_download_url | basename }}"
+    get_md5: False
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+  register: local_venv_stat
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Get remote venv checksum
+  uri:
+    url: "{{ manila_venv_download_url | replace('tgz', 'checksum') }}"
+    return_content: True
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+  register: remote_venv_checksum
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+# TODO: When project moves to ansible 2 we can pass this a sha256sum which will:
+#       a) allow us to remove force: yes
+#       b) allow the module to calculate the checksum of dest file which would
+#          result in file being downloaded only if provided and dest sha256sum
+#          checksums differ
+- name: Attempt venv download
+  get_url:
+    url: "{{ manila_venv_download_url }}"
+    dest: "/var/cache/{{ manila_venv_download_url | basename }}"
+    force: yes
+  ignore_errors: true
+  register: get_venv
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+    - (local_venv_stat.stat.exists == False or
+        {{ local_venv_stat.stat.checksum is defined and local_venv_stat.stat.checksum != remote_venv_checksum.content | trim }})
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Set manila get_venv fact
+  set_fact:
+    manila_get_venv: "{{ get_venv }}"
+  when: manila_venv_enabled | bool
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Remove existing venv
+  file:
+    path: "{{ manila_venv_bin | dirname }}"
+    state: absent
+  when:
+    - manila_venv_enabled | bool
+    - manila_get_venv | changed
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Create manila venv dir
+  file:
+    path: "{{ manila_venv_bin | dirname }}"
+    state: directory
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+    - manila_get_venv | changed
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Unarchive pre-built venv
+  unarchive:
+    src: "/var/cache/{{ manila_venv_download_url | basename }}"
+    dest: "{{ manila_venv_bin | dirname }}"
+    copy: "no"
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+    - manila_get_venv | changed
+  notify: Restart manila services
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Update virtualenv path
+  command: >
+    virtualenv-tools --update-path=auto {{ manila_venv_bin | dirname }}
+  when:
+    - not manila_developer_mode | bool
+    - manila_venv_enabled | bool
+    - manila_get_venv | success
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Install pip packages (venv)
+  pip:
+    name: "{{ item }}"
+    state: present
+    virtualenv: "{{ manila_venv_bin | dirname }}"
+    virtualenv_site_packages: "no"
+    extra_args: "{{ pip_install_options_fact }}"
+  register: install_packages
+  until: install_packages|success
+  retries: 5
+  delay: 2
+  with_items: manila_pip_packages
+  when:
+    - manila_venv_enabled | bool
+    - manila_get_venv | failed or manila_developer_mode | bool
+  notify: Restart manila services
+  tags:
+    - manila-install
+    - manila-pip-packages
+
+- name: Install pip packages (no venv)
+  pip:
+    name: "{{ item }}"
+    state: present
+    extra_args: "{{ pip_install_options_fact }}"
+  register: install_packages
+  until: install_packages|success
+  retries: 5
+  delay: 2
+  with_items: manila_pip_packages
+  when:
+    - not manila_developer_mode | bool
+    - not manila_venv_enabled | bool
+  notify: Restart manila services
+  tags:
+    - manila-install
+    - manila-pip-packages

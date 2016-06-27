@@ -1,0 +1,132 @@
+# {{ ansible_managed }}
+
+{% set _api_threads = ansible_processor_vcpus|default(2) // 2 %}
+{% set api_threads = _api_threads if _api_threads > 0 else 1 %}
+
+[DEFAULT]
+verbose = {{ verbose }}
+debug = {{ debug }}
+fatal_deprecations = {{ manila_fatal_deprecations }}
+my_ip = {{ manila_management_address }}
+
+osapi_volume_workers = {{ manila_osapi_volume_workers | default(api_threads) }}
+
+rootwrap_config = /etc/manila/rootwrap.conf
+api_paste_config = /etc/manila/api-paste.ini
+auth_strategy = keystone
+
+## manila API's enabled
+enable_v1_api = {{ manila_enable_v1_api }}
+enable_v2_api = {{ manila_enable_v2_api }}
+
+## RabbitMQ
+rpc_backend = {{ manila_rpc_backend }}
+
+## Quota
+#quota_volumes = {{ manila_quota_volumes }}
+#quota_snapshots = {{ manila_quota_snapshots }}
+#quota_consistencygroups = {{ manila_quota_consistencygroups }}
+#quota_gigabytes = {{ manila_quota_gigabytes }}
+#quota_backups = {{ manila_quota_backups }}
+#quota_backup_gigabytes = {{ manila_quota_backup_gigabytes }}
+
+## Nova
+nova_catalog_info = {{ manila_nova_catalog_info }}
+nova_catalog_admin_info = {{ manila_nova_catalog_admin_info }}
+
+## Glance
+# TODO(odyssey4me): Remove this conditional once https://review.openstack.org/299928 has merged
+#{% if manila_glance_api_servers is defined %}
+#glance_api_servers = {{ manila_glance_api_servers }}
+#{% else %}
+#glance_host = {{ manila_glance_host }}
+#glance_port = 9292
+#{% endif %}
+#glance_num_retries = 0
+#glance_api_version = {{ manila_glance_api_version }}
+
+#volume_clear = {{ manila_volume_clear }}
+#volume_clear_size = {{ manila_volume_clear_size }}
+#volume_clear_ionice = {{ manila_volume_clear_ionice }}
+#volume_name_template = {{ manila_volume_name_template }}
+
+storage_availability_zone = {{ manila_storage_availability_zone }}
+default_availability_zone = {{ manila_default_availability_zone }}
+
+#iscsi_helper = {{ manila_iscsi_helper }}
+#iscsi_iotype = {{ manila_iscsi_iotype }}
+#iscsi_ip_address = {{ manila_storage_address }}
+#iscsi_num_targets = {{ manila_iscsi_num_targets }}
+#iscsi_port = {{ manila_iscsi_port }}
+
+client_socket_timeout = {{ manila_client_socket_timeout }}
+
+#{% if manila_default_volume_type is defined %}
+#default_volume_type = {{ manila_default_volume_type }}
+#{% endif %}
+
+#{% if manila_backends is defined %}
+#enabled_backends={% for backend in manila_backends|dictsort %}{{ backend.0 }}{% if not loop.last %},{% endif %}{% endfor %}
+
+{% if manila_ceilometer_enabled %}
+[oslo_messaging_notifications]
+driver = messagingv2
+{% endif %}
+
+# All given backend(s)
+{% for backend_section in manila_backends|dictsort %}
+[{{ backend_section.0 }}]
+{% for key, value in backend_section.1.items() %}
+{{ key }}={{ value }}
+{% endfor %}
+{% if manila_nfs_client is defined %}
+nfs_shares_config={{ manila_nfs_client.nfs_shares_config }}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+[database]
+connection = mysql+pymysql://{{ manila_galera_user }}:{{ manila_container_mysql_password }}@{{ manila_galera_address }}/{{ manila_galera_database }}?charset=utf8
+
+[oslo_messaging_rabbit]
+rabbit_port = {{ rabbitmq_port }}
+rabbit_userid = {{ manila_rabbitmq_userid }}
+rabbit_password = {{ manila_rabbitmq_password }}
+rabbit_virtual_host = {{ manila_rabbitmq_vhost }}
+rabbit_hosts = {{ rabbitmq_servers }}
+rabbit_use_ssl = {{ rabbitmq_use_ssl }}
+
+[oslo_concurrency]
+lock_path = /var/lock/manila
+
+[profiler]
+profiler_enabled = {{ manila_profiler_enabled }}
+trace_sqlalchemy = {{ manila_profiler_trace_sqlalchemy }}
+
+[keymgr]
+encryption_auth_url = {{ keystone_service_internaluri }}/v3
+
+[keystone_authtoken]
+insecure = {{ keystone_service_internaluri_insecure | bool }}
+auth_plugin = {{ manila_keystone_auth_plugin }}
+signing_dir = /var/cache/manila
+auth_url = {{ keystone_service_adminurl }}
+auth_uri = {{ keystone_service_internaluri }}
+project_domain_id = {{ manila_service_project_domain_id }}
+user_domain_id = {{ manila_service_user_domain_id }}
+project_name = {{ manila_service_project_name }}
+username = {{ manila_service_user_name }}
+password = {{ manila_service_password }}
+
+memcached_servers = {{ memcached_servers }}
+
+token_cache_time = 300
+revocation_cache_time = 60
+
+# if your memcached server is shared, use these settings to avoid cache poisoning
+memcache_security_strategy = ENCRYPT
+memcache_secret_key = {{ memcached_encryption_key }}
+
+# if your keystone deployment uses PKI, and you value security over performance:
+check_revocations_for_cached = False
