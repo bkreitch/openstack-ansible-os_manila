@@ -22,17 +22,53 @@ enable_v2_api = {{ manila_enable_v2_api }}
 ## RabbitMQ
 rpc_backend = {{ manila_rpc_backend }}
 
-## Quota
-#quota_volumes = {{ manila_quota_volumes }}
-#quota_snapshots = {{ manila_quota_snapshots }}
-#quota_consistencygroups = {{ manila_quota_consistencygroups }}
-#quota_gigabytes = {{ manila_quota_gigabytes }}
-#quota_backups = {{ manila_quota_backups }}
-#quota_backup_gigabytes = {{ manila_quota_backup_gigabytes }}
+# Following opt is used for definition of share backends that should be enabled.
+# Values are conf groupnames that contain per manila-share service opts.
+enabled_share_backends = london
+
+# Enable protocols ‘NFS’ and ‘CIFS’ as those are the only supported
+# by Generic driver that we are configuring in this set up.
+# All available values are (‘NFS’, ‘CIFS’, ‘GlusterFS’, ‘HDFS’, 'CEPHFS')
+enabled_share_protocols = NFS,CIFS
+
+# Manila requires ‘share-type’ for share creation.
+# So, set here name of some share-type that will be used by default.
+default_share_type = default_share_type
+
+state_path = /opt/stack/data/manila
+osapi_share_extension = manila.api.contrib.standard_extensions
+rootwrap_config = /etc/manila/rootwrap.conf
+api_paste_config = /etc/manila/api-paste.ini
+share_name_template = share-%s
+
+# Set scheduler driver with usage of filters. Recommended.
+scheduler_driver = manila.scheduler.drivers.filter.FilterScheduler
 
 ## Nova
 nova_catalog_info = {{ manila_nova_catalog_info }}
 nova_catalog_admin_info = {{ manila_nova_catalog_admin_info }}
+
+#[neutron]
+# Only needed when the networking drivers use nova and "generic" driver,
+# as used in this example.
+#username = neutron
+#password = %password%
+#project_domain_id = default
+#project_name = service
+#user_domain_id = default
+#auth_url = http://127.0.0.1:5000
+#auth_type = password
+
+#[cinder]
+# Only needed by generic or windows drivers, the only drivers
+# as of Mitaka that require it.
+#username = cinder
+#password = %password%
+#project_domain_id = default
+#project_name = service
+#user_domain_id = default
+#auth_url = http://127.0.0.1:5000
+#auth_type = password
 
 ## Glance
 # TODO(odyssey4me): Remove this conditional once https://review.openstack.org/299928 has merged
@@ -130,3 +166,31 @@ memcache_secret_key = {{ memcached_encryption_key }}
 
 # if your keystone deployment uses PKI, and you value security over performance:
 check_revocations_for_cached = False
+
+[london]
+# This is custom opt group that is used for storing opts of share-service.
+# This one is used only when enabled using opt `enabled_share_backends`
+# from DEFAULT group.
+
+# Set usage of Generic driver which uses cinder as backend.
+share_driver = manila.share.drivers.generic.GenericShareDriver
+
+# Generic driver supports both driver modes - with and without handling
+# of share servers. So, we need to define explicitly which one we are
+# enabling using this driver.
+driver_handles_share_servers = True
+
+# Generic driver uses a glance image for building service VMs in nova.
+# The following options specify the image to use.
+# We use the latest build of [1].
+# [1] https://github.com/openstack/manila-image-elements
+service_instance_password = {{ manila_service_password }}
+service_instance_user = {{ manila_service_user_name }}
+service_image_name = manila-service-image
+
+# These will be used for keypair creation and inserted into service VMs.
+path_to_private_key = /home/stack/.ssh/id_rsa
+path_to_public_key = /home/stack/.ssh/id_rsa.pub
+
+# Custom name for share backend.
+share_backend_name = LONDON
