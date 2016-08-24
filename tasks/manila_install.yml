@@ -215,3 +215,20 @@
   tags:
     - manila-install
     - manila-pip-packages
+
+# temporary fix
+- name: Copy extra files (venv)
+  copy:
+    remote_src: True
+    src: "/usr/lib/python2.7/dist-packages/{{ item }}"
+    dest: "{{ manila_venv_bin | dirname }}/lib/python2.7/site-packages/"
+  with_items:
+    - ceph_volume_client.py
+    - cephfs.so
+    - rados.so
+  when:
+    - manila_venv_enabled | bool
+  notify: Restart manila services
+  tags:
+    - manila-install
+    - manila-pip-packages

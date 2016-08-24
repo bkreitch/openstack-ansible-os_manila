@@ -211,6 +211,7 @@ manila_pip_packages:
   - python-manilaclient
   - python-keystoneclient
   - python-neutronclient
+  - python-cephlibs
   - requests
   - Babel
   - oslo.policy
